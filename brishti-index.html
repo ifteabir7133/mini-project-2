@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brishti | Wipe the glass, meet the rain</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { ink: '#0B1D2A', deepsea: '#12384D', mist: '#9CC5D3', glow: '#EAF6FA', bolt: '#FFD36E' },
+          fontFamily: { display: ['Unbounded', 'sans-serif'], sans: ['Figtree', 'ui-sans-serif', 'system-ui', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Figtree:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    @keyframes drift { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(24px,-18px) scale(1.15) } }
+    .bokeh { position:absolute; border-radius:9999px; filter: blur(6px); animation: drift 9s ease-in-out infinite; }
+    .reveal { opacity:0; transform: translateY(28px); transition: opacity .8s ease, transform .8s ease; }
+    .reveal.in { opacity:1; transform:none; }
+    @keyframes swap { from { opacity:0; transform: translateY(12px) } to { opacity:1; transform:none } }
+    .swap { animation: swap .5s ease both; }
+    .spot { position:relative; overflow:hidden; }
+    .spot::before { content:""; position:absolute; inset:0; opacity:0; transition: opacity .3s;
+      background: radial-gradient(260px circle at var(--x,50%) var(--y,50%), rgba(255,211,110,.22), transparent 60%); }
+    .spot:hover::before { opacity:1; }
+    @keyframes flash { 0%,100% { opacity:0 } 8% { opacity:.85 } 16% { opacity:.1 } 24% { opacity:.6 } }
+    .flash { animation: flash .9s ease-out; }
+    @media (prefers-reduced-motion: reduce) {
+      .bokeh { animation:none } .reveal { opacity:1; transform:none; transition:none } .swap, .flash { animation:none }
+    }
+  </style>
+</head>
+<body class="bg-ink font-sans text-glow antialiased">
+
+    <header class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-ink/60 backdrop-blur-md">
+    <nav class="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
+      <a href="#top" class="font-display text-lg font-bold">Brishti<span class="text-bolt">.</span></a>
+      <button id="menu-btn" aria-label="Toggle menu" aria-expanded="false" class="rounded p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-bolt md:hidden">
+        <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <ul id="menu" class="absolute left-0 top-full hidden w-full flex-col bg-ink/95 px-5 pb-4 md:static md:flex md:w-auto md:flex-row md:gap-8 md:bg-transparent md:p-0">
+        <li><a class="block py-2 transition hover:text-bolt md:py-0" href="#mood">Rain mood</a></li>
+        <li><a class="block py-2 transition hover:text-bolt md:py-0" href="#rules">Rain rules</a></li>
+        <li><a class="block py-2 transition hover:text-bolt md:py-0" href="#end">Stay dry</a></li>
+      </ul>
+    </nav>
+  </header>
+
+    <section id="top" class="relative h-[100svh] min-h-[560px] overflow-hidden bg-gradient-to-b from-deepsea to-ink">
+        <div class="absolute inset-0" aria-hidden="true">
+      <span class="bokeh left-[8%] top-[55%] h-24 w-24 bg-bolt/70"></span>
+      <span class="bokeh left-[28%] top-[30%] h-16 w-16 bg-sky-300/70" style="animation-delay:-2s"></span>
+      <span class="bokeh left-[55%] top-[60%] h-32 w-32 bg-rose-300/60" style="animation-delay:-4s"></span>
+      <span class="bokeh left-[72%] top-[28%] h-20 w-20 bg-bolt/60" style="animation-delay:-6s"></span>
+      <span class="bokeh left-[88%] top-[58%] h-16 w-16 bg-emerald-300/60" style="animation-delay:-3s"></span>
+    </div>
+    <canvas id="fog" class="absolute inset-0 z-10 h-full w-full cursor-crosshair" style="touch-action:none" aria-hidden="true"></canvas>
+    <canvas id="rain" class="pointer-events-none absolute inset-0 z-20 h-full w-full" aria-hidden="true"></canvas>
+    <div id="bolt" class="pointer-events-none absolute inset-0 z-20 bg-white opacity-0" aria-hidden="true"></div>
+
+    <div class="pointer-events-none absolute inset-0 z-30 mx-auto flex max-w-5xl flex-col justify-center px-5">
+      <h1 class="max-w-3xl font-display text-4xl font-bold leading-tight drop-shadow-lg sm:text-6xl">The rain is outside. The window is fogged. Wipe it.</h1>
+      <p class="mt-5 max-w-md text-glow/90 drop-shadow">Drag across the glass to clear it. Then choose how hard it rains.</p>
+      <div class="pointer-events-auto mt-8 inline-flex w-fit rounded-full border border-white/20 bg-ink/50 p-1 backdrop-blur" role="group" aria-label="Rain strength">
+        <button data-mode="drizzle" class="mode rounded-full px-5 py-2 text-sm font-bold transition">Drizzle</button>
+        <button data-mode="rain" class="mode rounded-full px-5 py-2 text-sm font-bold transition">Rain</button>
+        <button data-mode="storm" class="mode rounded-full px-5 py-2 text-sm font-bold transition">Storm</button>
+      </div>
+    </div>
+  </section>
+
+    <section id="mood" class="mx-auto max-w-5xl px-5 py-24">
+    <h2 class="reveal font-display text-3xl font-bold">What this rain asks for</h2>
+    <p class="reveal mt-3 max-w-lg text-mist">Change the strength above and your plan for the day changes too.</p>
+    <div id="mood-panel" class="reveal spot mt-10 rounded-3xl border border-white/10 bg-white/5 p-8 sm:p-10">
+      <h3 id="m-title" class="font-display text-2xl font-bold"></h3>
+      <p id="m-text" class="mt-3 max-w-xl text-mist"></p>
+      <dl class="mt-8 grid gap-5 sm:grid-cols-3">
+        <div><dt class="text-sm text-bolt">Drink</dt><dd id="m-drink" class="mt-1 font-bold"></dd></div>
+        <div><dt class="text-sm text-bolt">Do</dt><dd id="m-do" class="mt-1 font-bold"></dd></div>
+        <div><dt class="text-sm text-bolt">Wear</dt><dd id="m-wear" class="mt-1 font-bold"></dd></div>
+      </dl>
+    </div>
+  </section>
+
+    <section id="rules" class="mx-auto max-w-5xl px-5 pb-24">
+    <h2 class="reveal font-display text-3xl font-bold">Three rules of a good rainy day</h2>
+    <div class="mt-10 grid gap-6 md:grid-cols-3">
+      <article class="reveal spot rounded-2xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1">
+        <h3 class="font-display text-lg font-bold">Slow down</h3>
+        <p class="mt-3 text-mist">Nobody expects you to hurry in the rain. Walk at half speed.</p>
+      </article>
+      <article class="reveal spot rounded-2xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1" style="transition-delay:.1s">
+        <h3 class="font-display text-lg font-bold">Share the umbrella</h3>
+        <p class="mt-3 text-mist">A small umbrella is a good reason to walk closer to a friend.</p>
+      </article>
+      <article class="reveal spot rounded-2xl border border-white/10 bg-white/5 p-7 transition hover:-translate-y-1" style="transition-delay:.2s">
+        <h3 class="font-display text-lg font-bold">Listen first</h3>
+        <p class="mt-3 text-mist">Before you open any app, listen to the roof for one minute.</p>
+      </article>
+    </div>
+  </section>
+
+  <section id="end" class="px-5 pb-24 text-center">
+    <a href="#top" class="reveal inline-block rounded-full bg-bolt px-8 py-4 font-bold text-ink transition hover:scale-105">Back to the window</a>
+  </section>
+
+  <footer class="border-t border-white/10 py-6 text-center text-sm text-mist">&copy; 2026 Brishti. A student project built with HTML and Tailwind CSS.</footer>
+
+  <script>
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const mb = document.getElementById('menu-btn'), menu = document.getElementById('menu');
+    mb.addEventListener('click', () => {
+      const open = menu.classList.toggle('hidden') === false;
+      menu.classList.toggle('flex', open);
+      mb.setAttribute('aria-expanded', open);
+    });
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+      if (innerWidth < 768) { menu.classList.add('hidden'); menu.classList.remove('flex'); }
+    }));
+
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .15 });
+    document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+    document.querySelectorAll('.spot').forEach(el => el.addEventListener('pointermove', e => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty('--x', (e.clientX - r.left) + 'px');
+      el.style.setProperty('--y', (e.clientY - r.top) + 'px');
+    }));
+
+    const MODES = {
+      drizzle: { n: 90,  speed: 7,  len: 10, title: 'Drizzle: the soft one', text: 'Thin rain that barely makes a sound. Perfect for a long, quiet walk.', drink: 'Hot lemon tea', do: 'Walk with no destination', wear: 'A light jacket' },
+      rain:    { n: 240, speed: 13, len: 18, title: 'Rain: the honest one', text: 'Steady rain on the roof. The kind that makes a window and a book feel like a plan.', drink: 'Milk tea with ginger', do: 'Read by the window', wear: 'A proper umbrella' },
+      storm:   { n: 460, speed: 22, len: 28, title: 'Storm: the loud one', text: 'Wind, thunder and flashing sky. Stay inside, switch off the lights and watch.', drink: 'Hot khichuri soup', do: 'Watch the lightning', wear: 'Nothing. Stay in.' }
+    };
+    let mode = 'rain', boltTimer;
+    const panel = document.getElementById('mood-panel');
+    function setMode(m) {
+      mode = m;
+      const d = MODES[m];
+      document.querySelectorAll('.mode').forEach(b => {
+        const on = b.dataset.mode === m;
+        b.classList.toggle('bg-bolt', on); b.classList.toggle('text-ink', on);
+      });
+      ['title','text','drink','do','wear'].forEach(k => document.getElementById('m-' + k).textContent = d[k]);
+      panel.querySelectorAll('h3, p, dd').forEach(el => { el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap'); });
+      clearTimeout(boltTimer);
+      if (m === 'storm' && !reduce) scheduleBolt();
+    }
+    function scheduleBolt() {
+      boltTimer = setTimeout(() => {
+        const b = document.getElementById('bolt');
+        b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+        scheduleBolt();
+      }, 2500 + Math.random() * 4000);
+    }
+    document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+
+    const rc = document.getElementById('rain'), rx = rc.getContext('2d');
+    let drops = [];
+    function sizeRain() { rc.width = rc.clientWidth; rc.height = rc.clientHeight; }
+    function loopRain() {
+      rx.clearRect(0, 0, rc.width, rc.height);
+      const d = MODES[mode];
+      while (drops.length < d.n) drops.push({ x: Math.random() * rc.width, y: Math.random() * rc.height, v: .7 + Math.random() * .6 });
+      drops.length = d.n;
+      rx.strokeStyle = 'rgba(234,246,250,.45)'; rx.lineWidth = 1.2; rx.beginPath();
+      for (const p of drops) {
+        rx.moveTo(p.x, p.y); rx.lineTo(p.x - d.speed * .15, p.y + d.len * p.v);
+        p.y += d.speed * p.v; p.x -= d.speed * .08;
+        if (p.y > rc.height) { p.y = -20; p.x = Math.random() * (rc.width + 100); }
+      }
+      rx.stroke();
+      requestAnimationFrame(loopRain);
+    }
+
+    const fc = document.getElementById('fog'), fx = fc.getContext('2d');
+    function paintFog() {
+      const g = fx.createLinearGradient(0, 0, 0, fc.height);
+      g.addColorStop(0, 'rgba(156,197,211,.93)'); g.addColorStop(1, 'rgba(120,165,184,.93)');
+      fx.globalCompositeOperation = 'source-over'; fx.fillStyle = g; fx.fillRect(0, 0, fc.width, fc.height);
+    }
+    function sizeAll() { fc.width = fc.clientWidth; fc.height = fc.clientHeight; sizeRain(); paintFog(); }
+    function wipe(x, y, px, py) {
+      fx.globalCompositeOperation = 'destination-out';
+      fx.lineCap = 'round'; fx.lineWidth = 70;
+      fx.beginPath(); fx.moveTo(px, py); fx.lineTo(x, y); fx.stroke();
+    }
+    let last = null;
+    function pos(e) { const r = fc.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+    fc.addEventListener('pointerdown', e => { last = pos(e); fc.setPointerCapture(e.pointerId); wipe(...last, ...last); });
+    fc.addEventListener('pointermove', e => { if (!last && e.pointerType === 'mouse') last = pos(e); if (!last) return; const p = pos(e); wipe(p[0], p[1], last[0], last[1]); last = p; });
+    fc.addEventListener('pointerup', () => last = null);
+    fc.addEventListener('pointerleave', () => last = null);
+    setInterval(() => { if (reduce) return; fx.globalCompositeOperation = 'source-over'; fx.fillStyle = 'rgba(140,184,200,.035)'; fx.fillRect(0, 0, fc.width, fc.height); }, 120);
+
+    function intro() {
+      if (reduce) return;
+      let t = 0, px = -40, py = fc.height * .6;
+      const id = setInterval(() => {
+        t += .04;
+        const x = -40 + t * (fc.width + 80) / 2.2, y = fc.height * .55 + Math.sin(t * 5) * fc.height * .18;
+        wipe(x, y, px, py); px = x; py = y;
+        if (x > fc.width + 40) clearInterval(id);
+      }, 16);
+    }
+
+    addEventListener('resize', sizeAll);
+    sizeAll(); setMode('rain');
+    if (!reduce) loopRain();
+    setTimeout(intro, 500);
+  </script>
+</body>
+</html>
